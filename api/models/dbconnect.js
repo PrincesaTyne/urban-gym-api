@@ -42,7 +42,7 @@ const createTables = async() =>{
         workout_id serial PRIMARY KEY,
         title VARCHAR(100) NOT NULL,
         category VARCHAR(50),
-        author_id serial REFERENCES users(user_id)
+        author_id serial REFERENCES users(user_id) ON DELETE CASCADE
     )`
     try{
         users =  await pool.query(usersTable)
