@@ -1,11 +1,13 @@
 const pool = require('../models/dbconnect')
+const bcrypt = require('bcrypt')
 
 
-const checkCondition = async(res, option, value)=>{
+
+const getUser = async(res, option, value)=>{
     try {
-        const condition = `SELECT * FROM users WHERE ${option} = $1`
-        const conditionValue = [value]
-        const result = await pool.query(condition, conditionValue)
+        const user = `SELECT * FROM users WHERE ${option} = $1`
+        const userValue = [value]
+        const result = await pool.query(user, userValue)
     return {
         data : result.rows
     }
@@ -18,14 +20,16 @@ const checkCondition = async(res, option, value)=>{
 }
 
 
-const addUser = async(res, username, name, email,password, age, gender, telephone, about_me, role)=>{
+const addUser = async(req, res)=>{
     try {
+        const {username, name, email, password, password2, age, gender, telephone, about_me, role} = req.body
+        const hashedPassword = await bcrypt.hash(password, 8)
         const regex = /\S+@\S+\.\S/
-        const isEmail = await checkCondition(res, 'email', email)
-        const isUsername = await checkCondition(res, 'username', username)
+        const isEmail = await getUser(res, 'email', email)
+        const isUsername = await getUser(res, 'username', username)
         const addNewUser = `INSERT INTO users (username, name, email, password, age, gender, telephone,  about_me, role, created_on, last_login)
-                        VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), NOW())`
-        const addNewUserValues = [username, name, email, password, age, gender, telephone, about_me, role]
+                        VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), NOW()) RETURNING *`
+        const addNewUserValues = [username, name, email, hashedPassword, age, gender, telephone, about_me, role]
         
         if (!email || !password){
             return res.status(400).json({
@@ -39,7 +43,7 @@ const addUser = async(res, username, name, email,password, age, gender, telephon
             return res.status(400).json({
                 message: 'Email already exists'
             })
-        } else if(username && isUsername.data.length){
+        }else if(username && isUsername.data.length){
             return res.status(400).json({
                 message: 'Username already exists'
             })
@@ -51,10 +55,15 @@ const addUser = async(res, username, name, email,password, age, gender, telephon
             return res.status(400).json({
                 message: 'Password should contain 6 or more characaters'
             })
+        }else if (password !== password2){
+            return res.status(400).json({
+                message: 'Passwords do not match'
+            })
         }else {
-            await pool.query(addNewUser, addNewUserValues)
+            const results = await pool.query(addNewUser, addNewUserValues)
             return res.status(201).json({
-                message: 'User created successfuly'
+                message: 'User created successfuly',
+                data: results.rows[0]
             })
         }
     } catch (error) {
@@ -65,6 +74,29 @@ const addUser = async(res, username, name, email,password, age, gender, telephon
 
 }
 
+const getAllUsers = async(req, res)=>{
+    try {
+        const allUsers = `SELECT * FROM users`
 
-const validation = {checkCondition, addUser}
-module.exports = validation
+        pool.query(allUsers, (err, results)=>{
+            if(err){
+                return res.status(400).json({
+                    message: err.message
+                })
+            }
+
+            return res.status(200).json({
+                message:  `We have ${results.rows.length} users.`,
+                data : results.rows
+            })
+        })
+    } catch (error) {
+        return res.status(400).json({
+            message: error.message
+        })
+    }
+}
+
+
+const user = {addUser, getAllUsers}
+module.exports = user
