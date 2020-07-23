@@ -43,6 +43,10 @@ const addUser = async(req, res)=>{
             return res.status(400).json({
                 message: 'Email already exists'
             })
+        }else if(username && (username.indexOf(' ') >= 0)){
+            return res.status(400).json({
+                message: 'Username should not contain spaces'
+            })
         }else if(username && isUsername.data.length){
             return res.status(400).json({
                 message: 'Username already exists'
