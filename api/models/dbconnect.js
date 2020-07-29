@@ -35,7 +35,7 @@ const createTables = async() =>{
         telephone VARCHAR(20),
         about_me VARCHAR(300),
         role VARCHAR(20) NOT NULL,
-        confirmed VARCHAR(20) DEFAULT FALSE,
+        confirmed BOOL NOT NULL DEFAULT FALSE,
         created_on TIMESTAMP NOT NULL,
         last_login TIMESTAMP NOT NULL
     )`
