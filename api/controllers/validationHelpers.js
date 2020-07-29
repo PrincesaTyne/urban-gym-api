@@ -1,5 +1,8 @@
+require('dotenv').config()
 const pool = require('../models/dbconnect')
 const bcrypt = require('bcrypt')
+const jwt = require('jsonwebtoken')
+const nodemailer = require('nodemailer')
 
 
 
@@ -65,8 +68,33 @@ const addUser = async(req, res)=>{
             })
         }else {
             const results = await pool.query(addNewUser, addNewUserValues)
+            
+            const token = await jwt.sign({
+                email: results.rows[0].email,
+                userId: results.rows[0].user_id
+            },
+            process.env.JWT_KEY,
+            {
+                expiresIn: '1d'
+            })
+
+            const url = `http://${process.env.HOST}:${process.env.PORT}/users/confirmation/${token}`
+
+            const transporter = nodemailer.createTransport({
+            service: "Gmail",
+            auth: {
+                user: process.env.GMAIL_USER, // Company Email
+                pass: process.env.GMAIL_PASSWORD // Company Password
+            },
+            })
+            const info = await transporter.sendMail({
+                from: `<${process.env.GMAIL_USER}>`, // Company address
+                to: `<${results.rows[0].email}>`, // list of receivers || user address
+                subject: "Urban-gym Confirmation Email",
+                html: `Please click this link to confirm your email: <a href="${url}">${url}</a>`
+                });
             return res.status(201).json({
-                message: 'User created successfuly',
+                message: 'User created successfuly. Check your email for confirmation',
                 data: results.rows[0]
             })
         }
@@ -75,8 +103,38 @@ const addUser = async(req, res)=>{
             message: error.message
         })
     }
-
 }
+
+const tokenConfirmation = async(req, res)=>{
+    try {
+        const decoded = jwt.verify(req.params.token, process.env.JWT_KEY)
+        const user = `SELECT EXISTS(SELECT 1 FROM users WHERE email = '${decoded.email}' and user_id = ${decoded.userId})`
+        const updateStatus = `UPDATE users SET confirmed = TRUE WHERE email = '${decoded.email}'`
+        //const abcValues = [decoded.email, decoded.userId]
+        const verifyUser = await pool.query(user)
+
+        if(verifyUser.rows[0].exists == true){
+            await pool.query(updateStatus)
+            return res.status(200).json({
+                message: 'Verification complete',
+                user: {
+                    email:decoded.email,
+                    user_id: decoded.userId
+                }
+            })
+        }else {
+            return res.status(400).json({
+                message: 'Please signup first!!'
+            })
+        }
+
+    } catch (error) {
+        return res.status(400).json({
+            message: error.message
+        })
+    }
+}
+
 
 const getAllUsers = async(req, res)=>{
     try {
@@ -102,5 +160,5 @@ const getAllUsers = async(req, res)=>{
 }
 
 
-const user = {addUser, getAllUsers}
+const user = {addUser, tokenConfirmation, getAllUsers}
 module.exports = user
