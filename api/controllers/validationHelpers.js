@@ -68,7 +68,8 @@ const addUser = async(req, res)=>{
             })
         }else {
             const results = await pool.query(addNewUser, addNewUserValues)
-            
+            results.rows[0].password = undefined
+
             const token = await jwt.sign({
                 email: results.rows[0].email,
                 userId: results.rows[0].user_id
@@ -93,6 +94,7 @@ const addUser = async(req, res)=>{
                 subject: "Urban-gym Confirmation Email",
                 html: `Please click this link to confirm your email: <a href="${url}">${url}</a>`
                 });
+            
             return res.status(201).json({
                 message: 'User created successfuly. Check your email for confirmation',
                 data: results.rows[0]
