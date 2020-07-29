@@ -112,7 +112,6 @@ const tokenConfirmation = async(req, res)=>{
         const decoded = jwt.verify(req.params.token, process.env.JWT_KEY)
         const user = `SELECT EXISTS(SELECT 1 FROM users WHERE email = '${decoded.email}' and user_id = ${decoded.userId})`
         const updateStatus = `UPDATE users SET confirmed = TRUE WHERE email = '${decoded.email}'`
-        //const abcValues = [decoded.email, decoded.userId]
         const verifyUser = await pool.query(user)
 
         if(verifyUser.rows[0].exists == true){
@@ -138,7 +137,7 @@ const tokenConfirmation = async(req, res)=>{
 }
 
 
-const getAllUsers = async(req, res)=>{
+const getAllUsers = (req, res)=>{
     try {
         const allUsers = `SELECT * FROM users`
 
@@ -161,6 +160,54 @@ const getAllUsers = async(req, res)=>{
     }
 }
 
+const login = async(req, res)=>{
+    try {
+        const {email, password} = req.body
+        const isEmail = await getUser(res, 'email', email)
+        const getPassword = `SELECT password FROM users WHERE email = $1`
+        const getValues = [email]
+        const getConfirmed = `SELECT confirmed FROM users WHERE email = $1`
+        const result = await pool.query(getPassword, getValues)
+        const results = await pool.query(getConfirmed, getValues)
+        const undecodedPasswd =  await bcrypt.compare(`${password}`, `${result.rows[0].password}`)
+        
+        const token = await jwt.sign({
+            email: isEmail.data[0].email,
+            userId: isEmail.data[0].user_id,
+            role: isEmail.data[0].role
+        },
+        process.env.JWT_KEY,
+        )
+        
+        if(!email || !password){
+            return res.status(400).json({
+                message: 'Email and Password is required to login'
+            })
+        }else if(isEmail.data.length == 0){
+            return res.status(400).json({
+                message: 'Please signup first'
+            })
+        }else if(undecodedPasswd == false){
+            return res.status(400).json({
+                message: 'Wrong Password'
+            })
+        }else if (results.rows[0].confirmed == false){
+            return res.status(400).json({
+                message: 'Please check your email for verification before login'
+            })
+        }else{
+            return res.status(200).json({
+                message: 'Login successful',
+                token: token
+            })
+        }
+    } catch (error) {
+        return res.status(400).json({
+            message: error.message
+        })
+    }
+}
 
-const user = {addUser, tokenConfirmation, getAllUsers}
+
+const user = {addUser, tokenConfirmation, getAllUsers, login}
 module.exports = user
