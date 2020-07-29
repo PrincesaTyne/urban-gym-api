@@ -1,10 +1,11 @@
+require('dotenv').config()
 const {Pool} = require('pg')
 const pool =  new Pool({
-    user: 'postgres',
-    host: 'localhost',
-    database: 'postgres',
-    password: '12345',
-    port: 5432
+    user: process.env.DB_USER,
+    host: process.env.DB_HOST,
+    database: process.env.DB_DATABASE,
+    password: process.env.DB_PASSWORD,
+    port: process.env.DB_PORT
 })
 
 /*
@@ -33,7 +34,8 @@ const createTables = async() =>{
         gender VARCHAR(250),
         telephone VARCHAR(20),
         about_me VARCHAR(300),
-        role VARCHAR(20) NOT NULL,  
+        role VARCHAR(20) NOT NULL,
+        confirmed VARCHAR(20) DEFAULT FALSE,
         created_on TIMESTAMP NOT NULL,
         last_login TIMESTAMP NOT NULL
     )`
