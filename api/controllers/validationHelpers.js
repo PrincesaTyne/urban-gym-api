@@ -136,7 +136,6 @@ const tokenConfirmation = async(req, res)=>{
     }
 }
 
-
 const getAllUsers = (req, res)=>{
     try {
         const allUsers = `SELECT * FROM users`
@@ -208,6 +207,29 @@ const login = async(req, res)=>{
     }
 }
 
+const profile = async (req, res)=>{
+    try {
+        const fetchUserValue = [req.params.userId]
+        const fetchUser = `SELECT * FROM users WHERE user_id = ${fetchUserValue}`
+        
+        pool.query(fetchUser, (err, results)=>{
+            if(err){
+                return res.status(400).json({
+                    message: err.message
+                })
+            }
+            results.rows[0].password = undefined
+            return res.status(200).json({
+                message:  `Profile for user ${req.params.userId}`,
+                data : results.rows
+            })
+        })
+    } catch (error) {
+        return res.status(400).json({
+            message: error.message
+        })
+    }
+}
 
-const user = {getUser, addUser, tokenConfirmation, getAllUsers, login}
+const user = {getUser, addUser, tokenConfirmation, getAllUsers, login, profile}
 module.exports = user
