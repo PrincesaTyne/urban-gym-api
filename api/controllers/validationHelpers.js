@@ -209,5 +209,5 @@ const login = async(req, res)=>{
 }
 
 
-const user = {addUser, tokenConfirmation, getAllUsers, login}
+const user = {getUser, addUser, tokenConfirmation, getAllUsers, login}
 module.exports = user
