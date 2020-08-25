@@ -111,14 +111,14 @@ const emailConfirmation = async(req, res)=>{
     try {
         const decoded = jwt.verify(req.params.token, process.env.JWT_KEY)
         const user = `SELECT EXISTS(SELECT 1 FROM users WHERE email = '${decoded.email}' and user_id = ${decoded.userId})`
-        const updateStatus = `UPDATE users SET confirmed = TRUE WHERE email = '${decoded.email}'`
+        const updateStatus = `UPDATE users SET is_confirmed = TRUE WHERE email = '${decoded.email}'`
         const verifyUser = await pool.query(user)
 
-        if(verifyUser.rows[0].exists == true){
+        if(verifyUser.rows[0].exists){
             await pool.query(updateStatus)
             return res.status(200).json({
                 message: 'Verification complete',
-                user: {
+                data: {
                     email:decoded.email,
                     user_id: decoded.userId
                 }
@@ -163,42 +163,45 @@ const getAllUsers = (req, res)=>{
 const login = async(req, res)=>{
     try {
         const {email, password} = req.body
-        const isEmail = await getUser(res, 'email', email)
-        const getPassword = `SELECT password FROM users WHERE email = $1`
-        const getValues = [email]
-        const getConfirmed = `SELECT confirmed FROM users WHERE email = $1`
-        const result = await pool.query(getPassword, getValues)
-        const results = await pool.query(getConfirmed, getValues)
-        const undecodedPasswd =  await bcrypt.compare(`${password}`, `${result.rows[0].password}`)
-        
-        const token = await jwt.sign({
-            email: isEmail.data[0].email,
-            userId: isEmail.data[0].user_id,
-            role: isEmail.data[0].role
-        },
-        process.env.JWT_KEY,
-        )
-        
+        const user = await getUser(res, 'email', email)
+
         if(!email || !password){
             return res.status(400).json({
                 message: 'Email and Password is required to login'
             })
-        }else if(isEmail.data.length == 0){
+        }else if(!user.data.length){
             return res.status(400).json({
                 message: 'Please signup first'
             })
-        }else if(undecodedPasswd == false){
+        }
+
+        const isPassword =  await bcrypt.compare(`${password}`, `${user.data[0].password}`)
+        const token = await jwt.sign({
+            email: user.data[0].email,
+            userId: user.data[0].user_id,
+            role: user.data[0].role
+        },
+        process.env.JWT_KEY,
+        )
+        
+        if(!isPassword){
             return res.status(400).json({
-                message: 'Wrong Password'
+                message: 'Wrong Password or email'
             })
-        }else if (results.rows[0].confirmed == false){
+        }else if (!user.data[0].is_confirmed){
             return res.status(400).json({
                 message: 'Please check your email for verification before login'
             })
         }else{
             return res.status(200).json({
                 message: 'Login successful',
-                token: token
+                token: token,
+                data: {
+                    username: user.data[0].username,
+                    email: user.data[0].email,
+                    userId: user.data[0].user_id,
+                    role: user.data[0].role
+                }
             })
         }
     } catch (error) {
@@ -209,9 +212,5 @@ const login = async(req, res)=>{
 }
 
 
-<<<<<<< 2f1e3b84ca8f4566863f673f752017e0f58065b1:api/controllers/users.js
-const user = {addUser, emailConfirmation, getAllUsers}
-=======
-const user = {addUser, tokenConfirmation, getAllUsers, login}
->>>>>>> Add login route:api/controllers/validationHelpers.js
+const user = {addUser, emailConfirmation, getAllUsers, login}
 module.exports = user
