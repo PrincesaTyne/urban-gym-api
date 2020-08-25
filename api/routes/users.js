@@ -1,11 +1,11 @@
 const express = require('express')
 const router = express.Router()
-const user = require('../controllers/validationHelpers')
+const user = require('../controllers/users')
 
-const {addUser, tokenConfirmation, getAllUsers} = user
+const {addUser, emailConfirmation, getAllUsers} = user
 
 router.get('/', getAllUsers)
 router.post('/signup', addUser)
-router.get('/confirmation/:token', tokenConfirmation)
+router.get('/confirmation/:token', emailConfirmation)
 
 module.exports = router

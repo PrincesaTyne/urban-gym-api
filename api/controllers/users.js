@@ -79,7 +79,7 @@ const addUser = async(req, res)=>{
                 expiresIn: '1d'
             })
 
-            const url = `http://${process.env.HOST}:${process.env.PORT}/users/confirmation/${token}`
+            const url = `http://${process.env.HOST}/users/confirmation/${token}`
 
             const transporter = nodemailer.createTransport({
             service: "Gmail",
@@ -107,12 +107,11 @@ const addUser = async(req, res)=>{
     }
 }
 
-const tokenConfirmation = async(req, res)=>{
+const emailConfirmation = async(req, res)=>{
     try {
         const decoded = jwt.verify(req.params.token, process.env.JWT_KEY)
         const user = `SELECT EXISTS(SELECT 1 FROM users WHERE email = '${decoded.email}' and user_id = ${decoded.userId})`
         const updateStatus = `UPDATE users SET confirmed = TRUE WHERE email = '${decoded.email}'`
-        //const abcValues = [decoded.email, decoded.userId]
         const verifyUser = await pool.query(user)
 
         if(verifyUser.rows[0].exists == true){
@@ -162,5 +161,5 @@ const getAllUsers = async(req, res)=>{
 }
 
 
-const user = {addUser, tokenConfirmation, getAllUsers}
+const user = {addUser, emailConfirmation, getAllUsers}
 module.exports = user
